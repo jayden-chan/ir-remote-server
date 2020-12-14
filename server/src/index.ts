@@ -1,20 +1,38 @@
-import { spawn } from "child_process";
 import { readFileSync } from "fs";
 import { KeyCodeMap, Handler, startIRServer } from "./server";
-import { mousemove, showTag } from "./util";
+import { mousemove, showTag, key, click } from "./util";
 
 function main() {
   const codemap: KeyCodeMap = JSON.parse(
     readFileSync("button-map.json", { encoding: "utf8" })
   );
 
+  let mousemode = true;
+
   const getMouseFunc = (dir: string) => {
     return (repeatCount: number) => {
-      const j = Math.min(100, (repeatCount + 1) * 10);
-      const x = dir === "right" ? j : dir === "left" ? -j : 0;
-      const y = dir === "down" ? j : dir === "up" ? -j : 0;
-      mousemove([x, y]);
+      if (mousemode) {
+        const j = Math.min(100, (repeatCount + 1) * 10);
+        const x = dir === "right" ? j : dir === "left" ? -j : 0;
+        const y = dir === "down" ? j : dir === "up" ? -j : 0;
+        mousemove([x, y]);
+      } else {
+        switch (dir) {
+          /* prettier-ignore */ case "up": key("Up"); break;
+          /* prettier-ignore */ case "down": key("Down"); break;
+          /* prettier-ignore */ case "left": key("Left"); break;
+          /* prettier-ignore */ case "right": key("Right"); break;
+        }
+      }
     };
+  };
+
+  const okFunc = () => {
+    if (mousemode) {
+      click("left");
+    } else {
+      key("Return");
+    }
   };
 
   const getTagFunc = (tag: number) => {
@@ -26,7 +44,7 @@ function main() {
   const keymap: {
     [key: string]: Handler;
   } = {
-    OK: { mouse: { click: "left" } },
+    OK: { func: okFunc },
     HOME: { key: "space" },
     LIVETV: { key: "Left" },
     GUIDE: { key: "Right" },
@@ -36,12 +54,12 @@ function main() {
     CHANNELDOWN: { mouse: { scroll: "down" } },
     MENU: { key: "f" },
     INFO: { key: "alt+Tab" },
+    BACK: { key: "BackSpace" },
     LAST: { key: "V" },
     RECORD: { key: "ctrl+v" },
     MUTE: { key: "m" },
-    BACK: { key: "BackSpace" },
     STOP: { key: "ctrl+q" },
-    SERVER: { key: "Return" },
+    SERVER: { func: () => (mousemode = !mousemode) },
     VOD: { mouse: { click: "right" } },
     UP: { func: getMouseFunc("up"), nodelay: true },
     DOWN: { func: getMouseFunc("down"), nodelay: true },
