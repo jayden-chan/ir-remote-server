@@ -1,4 +1,4 @@
-import { execFile } from "child_process";
+import { spawn } from "child_process";
 import { readFileSync } from "fs";
 import { KeyCodeMap, Handler, startIRServer } from "./server";
 import { mousemove, showTag } from "./util";
@@ -32,20 +32,31 @@ function main() {
     GUIDE: { key: "Right" },
     VOLUP: { key: "Up" },
     VOLDOWN: { key: "Down" },
+    CHANNELUP: { mouse: { scroll: "up" } },
+    CHANNELDOWN: { mouse: { scroll: "down" } },
     MENU: { key: "f" },
     LAST: { key: "V" },
+    RECORD: { key: "ctrl+v" },
     STOP: { key: "ctrl+q" },
+    SERVER: { key: "Return" },
     VOD: { mouse: { click: "right" } },
-    UP: { func: getMouseFunc("up") },
-    DOWN: { func: getMouseFunc("down") },
-    LEFT: { func: getMouseFunc("left") },
-    RIGHT: { func: getMouseFunc("right") },
+    UP: { func: getMouseFunc("up"), nodelay: true },
+    DOWN: { func: getMouseFunc("down"), nodelay: true },
+    LEFT: { func: getMouseFunc("left"), nodelay: true },
+    RIGHT: { func: getMouseFunc("right"), nodelay: true },
     1: { func: getTagFunc(1) },
     2: { func: getTagFunc(2) },
     3: { func: getTagFunc(3) },
     4: { func: getTagFunc(4) },
     5: { func: getTagFunc(5) },
     6: { func: getTagFunc(6) },
+    YELLOW: { spawn: ["vlc"] },
+    RED: {
+      command: ["xdg-open", "https://www.youtube.com/feed/subscriptions"],
+    },
+    BLUE: {
+      command: ["xdg-open", "https://www.twitch.tv/directory/following/live"],
+    },
   };
 
   startIRServer({ port: 3000, keymap, codemap, repeatDelay: 3 });

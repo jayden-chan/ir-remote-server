@@ -34,9 +34,9 @@ export function click(button: MouseButton): void {
 
 export function scroll(direction: "up" | "down"): void {
   if (direction == "down") {
-    execFile("xdotool", ["click", "5", "5", "5", "5", "5"]);
+    execFile("xdotool", ["click", "--repeat", "5", "5"]);
   } else {
-    execFile("xdotool", ["click", "4", "4", "4", "4", "4"]);
+    execFile("xdotool", ["click", "--repeat", "5", "4"]);
   }
 }
 

@@ -1,4 +1,4 @@
-import { execFile } from "child_process";
+import { execFile, spawn } from "child_process";
 import * as Net from "net";
 import * as xdo from "./util";
 
@@ -7,14 +7,17 @@ export type KeyCodeMap = {
 };
 
 export type Handler = Partial<{
+  nodelay: boolean;
   key: string;
   mouse: Partial<{
     moveTo: [number, number];
     move: [number, number];
-    click: "right" | "left" | "middle" | "up" | "down";
+    click: "right" | "left" | "middle";
+    scroll: "up" | "down";
   }>;
   func: (repeatCount: number) => void;
   command: string[];
+  spawn: string[];
 }>;
 
 export type ServerConfig = {
@@ -76,14 +79,17 @@ export function startIRServer({
         }
       } else if (data === "repeat") {
         repeatCount += 1;
-        if (repeatCount >= delay) {
-          if (keymap[prevCode] !== undefined) {
+        if (keymap[prevCode] !== undefined) {
+          const handler = keymap[prevCode];
+          if (handler.nodelay) {
+            execHandler(keymap[prevCode], repeatCount);
+          } else if (repeatCount >= delay) {
             execHandler(keymap[prevCode], repeatCount - delay + 1);
-          } else {
-            console.log(
-              `No handler registered for ${prevCode} (repeat ${repeatCount})`
-            );
           }
+        } else {
+          console.log(
+            `No handler registered for ${prevCode} (repeat ${repeatCount})`
+          );
         }
       }
     });
@@ -105,6 +111,8 @@ function execHandler(handler: Handler, repeatCount: number): void {
     xdo.key(handler.key);
   } else if (handler.func) {
     handler.func(repeatCount);
+  } else if (handler.spawn) {
+    spawn(handler.spawn[0], handler.spawn.slice(1));
   } else if (handler.command) {
     execFile(handler.command[0], handler.command.slice(1));
   } else if (handler.mouse) {
@@ -115,6 +123,8 @@ function execHandler(handler: Handler, repeatCount: number): void {
       xdo.mousemove(mouse.move);
     } else if (mouse.click) {
       xdo.click(mouse.click);
+    } else if (mouse.scroll) {
+      xdo.scroll(mouse.scroll);
     }
   }
 }
