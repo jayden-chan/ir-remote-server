@@ -1,34 +1,3 @@
-/*
-   IRremoteESP8266: IRrecvDumpV3 - dump details of IR codes with IRrecv
-   An IR detector/demodulator must be connected to the input kRecvPin.
-
-   Copyright 2009 Ken Shirriff, http://arcfn.com
-   Copyright 2017-2019 David Conran
-
-   Example circuit diagram:
-    https://github.com/crankyoldgit/IRremoteESP8266/wiki#ir-receiving
-
-   Changes:
-     Version 1.2 October, 2020
-       - Enable easy setting of the decoding tolerance value.
-     Version 1.1 May, 2020
-       - Create DumpV3 from DumpV2
-       - Add OTA Base
-     Version 1.0 October, 2019
-       - Internationalisation (i18n) support.
-       - Stop displaying the legacy raw timing info.
-     Version 0.5 June, 2019
-       - Move A/C description to IRac.cpp.
-     Version 0.4 July, 2018
-       - Minor improvements and more A/C unit support.
-     Version 0.3 November, 2017
-       - Support for A/C decoding for some protocols.
-     Version 0.2 April, 2017
-       - Decode from a copy of the data so we can start capturing faster thus
-         reduce the likelihood of miscaptures.
-   Based on Ken Shirriff's IrsendDemo Version 0.1 July, 2009,
-*/
-
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <IRac.h>
@@ -68,32 +37,8 @@ const uint32_t kBaudRate = 115200;
  * than normal buffer so we can handle Air Conditioner remote codes.
  */
 const uint16_t kCaptureBufferSize = 1024;
-
-/* kTimeout is the Nr. of milli-Seconds of no-more-data before we consider a
- * message ended.
- * This parameter is an interesting trade-off. The longer the timeout, the more
- * complex a message it can capture. e.g. Some device protocols will send
- * multiple message packets in quick succession, like Air Conditioner remotes.
- * Air Coniditioner protocols often have a considerable gap (20-40+ms) between
- * packets.
- * The downside of a large timeout value is a lot of less complex protocols
- * send multiple messages when the remote's button is held down. The gap between
- * them is often also around 20+ms. This can result in the raw data be 2-3+
- * times larger than needed as it has captured 2-3+ messages in a single
- * capture. Setting a low timeout value can resolve this.
- * So, choosing the best kTimeout value for your use particular case is
- * quite nuanced. Good luck and happy hunting.
- * NOTE: Don't exceed kMaxTimeoutMs. Typically 130ms.
- */
-#if DECODE_AC
-/* Some A/C units have gaps in their protocols of ~40ms. e.g. Kelvinator
- * A value this large may swallow repeats of some protocols
- */
-const uint8_t kTimeout = 50;
-#else /* DECODE_AC */
-/* Suits most messages, while not swallowing many repeats. */
 const uint8_t kTimeout = 15;
-#endif /* DECODE_AC */
+
 /* Alternatives:
  * const uint8_t kTimeout = 90;
  * Suits messages with big gaps like XMP-1 & some aircon units, but can
@@ -222,8 +167,7 @@ void loop() {
         } else {
           client.println(uint64ToString(results.value, 16));
         }
-        yield(); /* Feed the WDT as the text output can take a while to print.
-                  */
+        yield();
       }
     }
   }
