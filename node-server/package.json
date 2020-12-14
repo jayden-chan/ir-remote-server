@@ -1,0 +1,17 @@
+{
+  "name": "node-server",
+  "version": "1.0.0",
+  "description": "Node.JS TCP server to recieve IR signals",
+  "main": "dist/index.js",
+  "author": "Jayden Chan <jaydencn7@gmail.com>",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w"
+  },
+  "devDependencies": {
+    "@types/node": "^14.14.13",
+    "typescript": "^4.1.3"
+  }
+}
