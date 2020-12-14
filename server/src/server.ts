@@ -7,7 +7,7 @@ export type KeyCodeMap = {
 };
 
 export type Handler = Partial<{
-  nodelay: boolean;
+  delay: number;
   key: string;
   mouse: Partial<{
     moveTo: [number, number];
@@ -81,7 +81,7 @@ export function startIRServer({
         repeatCount += 1;
         if (keymap[prevCode] !== undefined) {
           const handler = keymap[prevCode];
-          if (handler.nodelay) {
+          if (handler.delay !== undefined && repeatCount >= handler.delay) {
             execHandler(keymap[prevCode], repeatCount);
           } else if (repeatCount >= delay) {
             execHandler(keymap[prevCode], repeatCount - delay + 1);
