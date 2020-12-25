@@ -1,6 +1,8 @@
 import { execFile, spawn } from "child_process";
 import * as Net from "net";
-import * as xdo from "./util";
+import * as util from "./util";
+
+export { util };
 
 export type KeyCodeMap = {
   [key: string]: string;
@@ -43,7 +45,7 @@ export type ServerConfig = {
   };
 };
 
-export function startIRServer({
+export function startIRSubscriber({
   port,
   keymap,
   repeatDelay,
@@ -64,9 +66,6 @@ export function startIRServer({
     socket.on("data", (chunk) => {
       const data = chunk.toString().trim();
       const key = codemap[data];
-      if (process.argv.includes("--debug")) {
-        console.log(`Data: "${data}" Key: "${key}"`);
-      }
 
       if (key !== undefined) {
         prevCode = key;
@@ -108,7 +107,7 @@ export function startIRServer({
 
 function execHandler(handler: Handler, repeatCount: number): void {
   if (handler.key) {
-    xdo.key(handler.key);
+    util.key(handler.key);
   } else if (handler.func) {
     handler.func(repeatCount);
   } else if (handler.spawn) {
@@ -118,13 +117,13 @@ function execHandler(handler: Handler, repeatCount: number): void {
   } else if (handler.mouse) {
     const mouse = handler.mouse;
     if (mouse.moveTo) {
-      xdo.mousejump(mouse.moveTo);
+      util.mousejump(mouse.moveTo);
     } else if (mouse.move) {
-      xdo.mousemove(mouse.move);
+      util.mousemove(mouse.move);
     } else if (mouse.click) {
-      xdo.click(mouse.click);
+      util.click(mouse.click);
     } else if (mouse.scroll) {
-      xdo.scroll(mouse.scroll);
+      util.scroll(mouse.scroll);
     }
   }
 }
