@@ -1,5 +1,7 @@
 import { execFile, spawn } from "child_process";
 import * as Net from "net";
+
+import { DEFAULT_PORT } from "./index";
 import * as util from "./util";
 
 export type KeyCodeMap = {
@@ -28,7 +30,7 @@ export type SubscriberConfig = {
   /**
    * The port of the server
    */
-  port: number;
+  port?: number;
   /**
    * The hostname of the server
    */
@@ -60,7 +62,7 @@ export class IRSubscriber {
   private keymaps: { [key: string]: Keymap };
 
   constructor({ port, host, keymaps, repeatDelay, codemap }: SubscriberConfig) {
-    this.socket = Net.connect({ port, host });
+    this.socket = Net.connect({ port: port ?? DEFAULT_PORT, host });
     this.codemap = codemap;
     this.keymaps = keymaps;
     if (repeatDelay) {

@@ -1,12 +1,13 @@
 import * as Net from "net";
+import { DEFAULT_PORT } from "./index";
 
 export class IRServer {
   port: number;
   server: Net.Server | null;
   subscribers: { sock: Net.Socket; devices: string[] }[] = [];
 
-  constructor(port: number) {
-    this.port = port;
+  constructor(port?: number) {
+    this.port = port ?? DEFAULT_PORT;
     this.server = Net.createServer();
   }
 
