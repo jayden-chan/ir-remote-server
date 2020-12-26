@@ -1,5 +1,5 @@
 {
-  "name": "subscriber",
+  "name": "ir-remote-server",
   "version": "1.0.0",
   "description": "Node.JS TCP client to recieve IR signals from the server",
   "main": "dist/index.js",
