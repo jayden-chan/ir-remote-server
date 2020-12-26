@@ -141,11 +141,25 @@ void setup() {
   Serial.print(':');
   Serial.println(port);
 
-  /* Use WiFiClient class to create TCP connections */
-  if (!client.connect(host, port)) {
-    Serial.println("connection failed");
-  } else {
+  ensureClient();
+}
+
+int ensureClient() {
+  if (client.connected()) {
+    return 1;
+  }
+
+  if (client.connect(host, port)) {
     Serial.println("Connected!");
+
+    // We can't have Nagle's algorithm buffering the packets because
+    // it will lead to strange timings when holding down a button on
+    // the remote and sending the "repeat" packets.
+    client.setNoDelay(true);
+    return 1;
+  } else {
+    Serial.println("Connection failed");
+    return 0;
   }
 }
 
@@ -153,22 +167,13 @@ void setup() {
 void loop() {
   /* Check if the IR code has been received. */
   if (irrecv.decode(&results)) {
-    if (!client.connected()) {
-      Serial.println("Client disconnected, attempting reconnect...");
-      if (!client.connect(host, port)) {
-        Serial.println("Connection failed");
+    if (ensureClient() && !results.overflow && results.decode_type != UNKNOWN) {
+      if (results.repeat) {
+        client.println("repeat");
       } else {
-        Serial.println("Connected!");
+        client.println(uint64ToString(results.value, 16));
       }
-    } else {
-      if (!results.overflow && results.decode_type != UNKNOWN) {
-        if (results.repeat) {
-          client.println("repeat");
-        } else {
-          client.println(uint64ToString(results.value, 16));
-        }
-        yield();
-      }
+      yield();
     }
   }
 }
