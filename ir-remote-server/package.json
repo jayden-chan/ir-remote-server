@@ -1,6 +1,6 @@
 {
   "name": "ir-remote-server",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "NodeJS server/subscribers for distributing IR signals over a mesh network",
   "main": "dist/index.js",
   "author": "Jayden Chan <jaydencn7@gmail.com>",
