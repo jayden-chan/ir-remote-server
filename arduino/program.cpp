@@ -12,11 +12,14 @@
 #define STAPSK "your-wifi-password"
 #endif
 
+#define SERVER_HOST "your-ir-remote-server-ip";
+#define SERVER_PORT 10765;
+
 const char *ssid = STASSID;
 const char *password = STAPSK;
 
-const char *host = "192.168.1.225";
-const uint16_t port = 3000;
+const char *host = SERVER_HOST;
+const uint16_t port = SERVER_PORT;
 
 /* ==================== start of TUNEABLE PARAMETERS ====================
  * An IR detector/demodulator is connected to GPIO pin 14
