@@ -69,10 +69,18 @@ export class IRSubscriber {
   }
 
   public async subscribe(device: string): Promise<void> {
-    this.socket.write(`subscribe ${device}`);
+    return new Promise((resolve, reject) => {
+      this.socket.write(`subscribe ${device}`, (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 
-  public listen(): void {
+  public start() {
     this.socket.on("data", (c) => {
       const chunk = c.toString().trim();
       const [, connectSuccess] = chunk.match(/success (\w+)/) ?? [];
