@@ -3,6 +3,7 @@
 #include <IRac.h>
 #include <IRrecv.h>
 #include <IRremoteESP8266.h>
+#include <IRsend.h>
 #include <IRtext.h>
 #include <IRutils.h>
 #include <assert.h>
@@ -14,6 +15,9 @@
 
 #define SERVER_HOST "your-ir-remote-server-ip";
 #define SERVER_PORT 10765;
+#define DEVICE_ID "1"
+
+#define DEBUG_MODE
 
 const char *ssid = STASSID;
 const char *password = STAPSK;
@@ -27,6 +31,7 @@ const uint16_t port = SERVER_PORT;
  * Note: GPIO 16 won't work on the ESP8266 as it does not have interrupts.
  */
 const uint16_t kRecvPin = 14;
+const uint16_t kIrLed = 4; // ESP8266 GPIO send pin to use. Recommended: 4 (D2).
 
 /* The Serial connection baud rate.
  * i.e. Status message will be sent to the PC at this baud rate.
@@ -91,6 +96,7 @@ const uint8_t kTolerancePercentage =
 
 /* Use turn on the save buffer feature for more complete capture coverage. */
 IRrecv irrecv(kRecvPin, kCaptureBufferSize, kTimeout, true);
+IRsend irsend(kIrLed);  // Set the GPIO to be used to sending the message.
 decode_results results; /* Somewhere to store the results */
 WiFiClient client;
 
@@ -116,6 +122,8 @@ void setup() {
   irrecv.setTolerance(
       kTolerancePercentage); /* Override the default tolerance. */
   irrecv.enableIRIn();       /* Start the receiver */
+
+  irsend.begin();
 
   /* We start by connecting to a WiFi network */
   Serial.println();
@@ -153,28 +161,57 @@ int ensureClient() {
   }
 
   if (client.connect(host, port)) {
+#ifdef DEBUG_MODE
     Serial.println("Connected!");
+#endif
 
     // We can't have Nagle's algorithm buffering the packets because
     // it will lead to strange timings when holding down a button on
     // the remote and sending the "repeat" packets.
     client.setNoDelay(true);
+
+    client.print("register " DEVICE_ID);
     return 1;
   } else {
+#ifdef DEBUG_MODE
     Serial.println("Connection failed");
+#endif
     return 0;
   }
 }
 
 /* The repeating section of the code */
 void loop() {
+  if (client.connected() && client.available()) {
+    uint64_t recv = 0;
+    int offset = 0;
+    while (client.available()) {
+      char c = client.read();
+      recv |= (c << offset);
+      offset += 8;
+    }
+    Serial.println(uint64ToString(recv, 16));
+    irsend.sendNEC(recv);
+  }
+
   /* Check if the IR code has been received. */
   if (irrecv.decode(&results)) {
     if (ensureClient() && !results.overflow && results.decode_type != UNKNOWN) {
+#ifdef DEBUG_MODE
+      Serial.print(resultToHumanReadableBasic(&results));
+#endif
       if (results.repeat) {
-        client.println("repeat");
+        String send_data = DEVICE_ID " repeat";
+#ifdef DEBUG_MODE
+        Serial.println(send_data);
+#endif
+        client.print(send_data);
       } else {
-        client.println(uint64ToString(results.value, 16));
+        String send_data = DEVICE_ID " " + uint64ToString(results.value, 16);
+#ifdef DEBUG_MODE
+        Serial.println(send_data);
+#endif
+        client.print(send_data);
       }
       yield();
     }
