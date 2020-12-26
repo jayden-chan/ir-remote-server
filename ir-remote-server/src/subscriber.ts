@@ -6,6 +6,10 @@ export type KeyCodeMap = {
   [key: string]: string;
 };
 
+export type Keymap = {
+  [key: string]: Handler;
+};
+
 export type Handler = Partial<{
   delay: number;
   key: string;
@@ -22,9 +26,13 @@ export type Handler = Partial<{
 
 export type SubscriberConfig = {
   /**
-   * The port to run the server on
+   * The port of the server
    */
   port: number;
+  /**
+   * The hostname of the server
+   */
+  host: string;
   /**
    * The number of key repeat codes to skip before
    * resuming invocation of the key handler
@@ -38,69 +46,90 @@ export type SubscriberConfig = {
   /**
    * The handlers for the key codes
    */
-  keymap: {
-    [key: string]: Handler;
+  keymaps: {
+    [key: string]: Keymap;
   };
 };
 
-export function startIRSubscriber({
-  port,
-  keymap,
-  repeatDelay,
-  codemap,
-}: SubscriberConfig): Net.Server {
-  const server = Net.createServer();
-  const delay = repeatDelay ?? 0;
+export class IRSubscriber {
+  private socket: Net.Socket;
+  private delay = 0;
+  private prevCode = "";
+  private repeatCount = 0;
+  private codemap: KeyCodeMap;
+  private keymaps: { [key: string]: Keymap };
 
-  let prevCode = "";
-  let repeatCount = 0;
-  server.listen(port, () => {
-    console.log(`Server listening on port ${port}.`);
-  });
+  constructor({ port, host, keymaps, repeatDelay, codemap }: SubscriberConfig) {
+    this.socket = Net.connect({ port, host });
+    this.codemap = codemap;
+    this.keymaps = keymaps;
+    if (repeatDelay) {
+      this.delay = repeatDelay;
+    }
+  }
 
-  server.on("connection", (socket) => {
-    console.log("Client connected");
+  public async subscribe(device: string): Promise<void> {
+    this.socket.write(`subscribe ${device}`);
+  }
 
-    socket.on("data", (chunk) => {
-      const data = chunk.toString().trim();
-      const key = codemap[data];
-
-      if (key !== undefined) {
-        prevCode = key;
-        repeatCount = 0;
-
-        if (keymap[key] !== undefined) {
-          execHandler(keymap[key], repeatCount);
-        } else {
-          console.log(`No handler registered for ${key}`);
-        }
-      } else if (data === "repeat") {
-        repeatCount += 1;
-        if (keymap[prevCode] !== undefined) {
-          const handler = keymap[prevCode];
-          if (handler.delay !== undefined && repeatCount >= handler.delay) {
-            execHandler(keymap[prevCode], repeatCount);
-          } else if (repeatCount >= delay) {
-            execHandler(keymap[prevCode], repeatCount - delay + 1);
-          }
-        } else {
-          console.log(
-            `No handler registered for ${prevCode} (repeat ${repeatCount})`
-          );
-        }
+  public listen(): void {
+    this.socket.on("data", (c) => {
+      const chunk = c.toString().trim();
+      const [, connectSuccess] = chunk.match(/success (\w+)/) ?? [];
+      if (connectSuccess !== undefined) {
+        console.log(`Successfully connected to device ${connectSuccess}`);
+        return;
       }
-    });
 
-    socket.on("end", () => {
-      console.log("Closing connection with client");
-    });
+      const [, device, data] = chunk.match(/(\w+) (\w+)/) ?? [];
+      if (device === undefined || data === undefined) {
+        console.error(
+          `Recived chunk but was unable to extract device/data: ${chunk}`
+        );
+        return;
+      }
 
-    socket.on("error", (err) => {
-      console.log(`Error: ${err}`);
+      this.handleDevicePacket(device, data);
     });
-  });
+  }
 
-  return server;
+  public close(): void {
+    this.socket.destroy();
+  }
+
+  private handleDevicePacket(device: string, data: string): void {
+    const key = this.codemap[data];
+    const keymap = this.keymaps[device];
+    if (keymap === undefined) {
+      console.error(`No keymap found for device ${device}`);
+      return;
+    }
+
+    if (key !== undefined) {
+      this.prevCode = key;
+      this.repeatCount = 0;
+
+      if (keymap[key] !== undefined) {
+        execHandler(keymap[key], this.repeatCount);
+      } else {
+        console.error(`No handler registered for ${key}`);
+      }
+    } else if (data === "repeat") {
+      this.repeatCount += 1;
+      if (keymap[this.prevCode] !== undefined) {
+        const handler = keymap[this.prevCode];
+        if (handler.delay !== undefined && this.repeatCount >= handler.delay) {
+          execHandler(keymap[this.prevCode], this.repeatCount);
+        } else if (this.repeatCount >= this.delay) {
+          execHandler(keymap[this.prevCode], this.repeatCount - this.delay + 1);
+        }
+      } else {
+        console.error(
+          `No handler registered for ${this.prevCode} (repeat ${this.repeatCount})`
+        );
+      }
+    }
+  }
 }
 
 function execHandler(handler: Handler, repeatCount: number): void {

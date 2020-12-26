@@ -1,18 +1,17 @@
 import {
   KeyCodeMap,
   Handler,
-  startIRSubscriber,
+  IRSubscriber,
   SubscriberConfig,
 } from "./subscriber";
-import { startIRServer, ServerConfig } from "./server";
+import { IRServer } from "./server";
 import * as IRUtil from "./util";
 
 export {
-  startIRServer,
-  startIRSubscriber,
+  IRServer,
+  IRSubscriber,
   KeyCodeMap,
   Handler,
   SubscriberConfig,
-  ServerConfig,
   IRUtil,
 };
