@@ -31,20 +31,29 @@ export type SubscriberConfig = {
    * The port of the server
    */
   port?: number;
+
   /**
    * The hostname of the server
    */
   host: string;
+
+  /**
+   * Whether or not to emit logs to stdout
+   */
+  shouldLog?: boolean;
+
   /**
    * The number of key repeat codes to skip before
    * resuming invocation of the key handler
    */
   repeatDelay?: number;
+
   /**
    * The mapping between key Hex codes and human-readable
    * key codes (ex. 40BD01FE -> HOME)
    */
   codemap: KeyCodeMap;
+
   /**
    * The handlers for the key codes
    */
@@ -55,19 +64,26 @@ export type SubscriberConfig = {
 
 export class IRSubscriber {
   private socket: Net.Socket;
-  private delay = 0;
+  private delay: number;
   private prevCode = "";
   private repeatCount = 0;
   private codemap: KeyCodeMap;
   private keymaps: { [key: string]: Keymap };
+  private shouldLog: boolean;
 
-  constructor({ port, host, keymaps, repeatDelay, codemap }: SubscriberConfig) {
+  constructor({
+    port,
+    host,
+    keymaps,
+    repeatDelay,
+    codemap,
+    shouldLog,
+  }: SubscriberConfig) {
     this.socket = Net.connect({ port: port ?? DEFAULT_PORT, host });
     this.codemap = codemap;
     this.keymaps = keymaps;
-    if (repeatDelay) {
-      this.delay = repeatDelay;
-    }
+    this.shouldLog = shouldLog ?? true;
+    this.delay = repeatDelay ?? 0;
   }
 
   public async subscribe(device: string): Promise<void> {
@@ -82,18 +98,38 @@ export class IRSubscriber {
     });
   }
 
+  private log(message?: any, ...optionalParams: any[]) {
+    if (this.shouldLog) {
+      if (optionalParams && optionalParams.length > 0) {
+        console.log(message, optionalParams);
+      } else {
+        console.log(message);
+      }
+    }
+  }
+
+  private error(message?: any, ...optionalParams: any[]) {
+    if (this.shouldLog) {
+      if (optionalParams && optionalParams.length > 0) {
+        console.error(message, optionalParams);
+      } else {
+        console.error(message);
+      }
+    }
+  }
+
   public start() {
     this.socket.on("data", (c) => {
       const chunk = c.toString().trim();
       const [, connectSuccess] = chunk.match(/success (\w+)/) ?? [];
       if (connectSuccess !== undefined) {
-        console.log(`Successfully connected to device ${connectSuccess}`);
+        this.log(`Successfully connected to device ${connectSuccess}`);
         return;
       }
 
       const [, device, data] = chunk.match(/(\w+) (\w+)/) ?? [];
       if (device === undefined || data === undefined) {
-        console.error(
+        this.error(
           `Recived chunk but was unable to extract device/data: ${chunk}`
         );
         return;
@@ -111,7 +147,7 @@ export class IRSubscriber {
     const key = this.codemap[data];
     const keymap = this.keymaps[device];
     if (keymap === undefined) {
-      console.error(`No keymap found for device ${device}`);
+      this.error(`No keymap found for device ${device}`);
       return;
     }
 
@@ -122,7 +158,7 @@ export class IRSubscriber {
       if (keymap[key] !== undefined) {
         execHandler(keymap[key], this.repeatCount);
       } else {
-        console.error(`No handler registered for ${key}`);
+        this.error(`No handler registered for ${key}`);
       }
     } else if (data === "repeat") {
       this.repeatCount += 1;
@@ -134,7 +170,7 @@ export class IRSubscriber {
           execHandler(keymap[this.prevCode], this.repeatCount - this.delay + 1);
         }
       } else {
-        console.error(
+        this.error(
           `No handler registered for ${this.prevCode} (repeat ${this.repeatCount})`
         );
       }
