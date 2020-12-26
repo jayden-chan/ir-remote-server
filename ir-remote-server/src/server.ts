@@ -66,6 +66,12 @@ export class IRServer {
 
     this.server.on("connection", (socket) => {
       this.log("Client connected");
+      // The server is responsible for forwarding packets from the IR nodes
+      // to subscribers, as well as sending packets to the IR nodes for emitting
+      // codes. We can't have these packet timings being changed by Nagle's algorithm
+      // because it leads to weird timings when pressing buttons on a remote
+      // (especially when holding down a button)
+      socket.setNoDelay(true);
 
       socket.on("data", (chunk) => {
         const data = chunk.toString().trim();
@@ -91,6 +97,7 @@ export class IRServer {
           return;
         }
 
+        // Handle device registration requests
         const [, deviceRegister] = data.match(/register (\w+)/) ?? [];
         if (deviceRegister !== undefined) {
           this.log(`Registering device ${deviceRegister}`);
@@ -106,6 +113,7 @@ export class IRServer {
           return;
         }
 
+        // Send IR signals using an IR node
         const [, sendDevice, sendData] = data.match(/send (\w+) (\w+)/) ?? [];
         if (sendDevice !== undefined && sendData !== undefined) {
           const dev = this.devices.find((d) => d.id === sendDevice);
@@ -122,11 +130,8 @@ export class IRServer {
             return;
           }
 
-          dev.sock.write(
-            new Uint8Array(
-              hexMatches.map((byte) => parseInt(byte, 16)).reverse()
-            )
-          );
+          const data = hexMatches.map((byte) => parseInt(byte, 16)).reverse();
+          dev.sock.write(new Uint8Array(data));
 
           return;
         }
@@ -147,7 +152,7 @@ export class IRServer {
         this.log("Closing connection with client");
 
         const sub = this.subscribers.findIndex((s) => s.sock === socket);
-        if (sub) {
+        if (sub !== -1) {
           this.log("Client was a subscriber, removing from list");
           this.subscribers.splice(sub, 1);
         }

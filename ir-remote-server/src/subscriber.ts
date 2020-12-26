@@ -80,6 +80,11 @@ export class IRSubscriber {
     shouldLog,
   }: SubscriberConfig) {
     this.socket = Net.connect({ port: port ?? DEFAULT_PORT, host });
+
+    // We don't want Nagle's algorithm messing with the packet timings
+    // when we are trying to send key codes to the IR nodes
+    this.socket.setNoDelay(true);
+
     this.codemap = codemap;
     this.keymaps = keymaps;
     this.shouldLog = shouldLog ?? true;
@@ -96,26 +101,6 @@ export class IRSubscriber {
         }
       });
     });
-  }
-
-  private log(message?: any, ...optionalParams: any[]) {
-    if (this.shouldLog) {
-      if (optionalParams && optionalParams.length > 0) {
-        console.log(message, optionalParams);
-      } else {
-        console.log(message);
-      }
-    }
-  }
-
-  private error(message?: any, ...optionalParams: any[]) {
-    if (this.shouldLog) {
-      if (optionalParams && optionalParams.length > 0) {
-        console.error(message, optionalParams);
-      } else {
-        console.error(message);
-      }
-    }
   }
 
   public start() {
@@ -136,6 +121,18 @@ export class IRSubscriber {
       }
 
       this.handleDevicePacket(device, data);
+    });
+  }
+
+  public async send(device: string, code: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.socket.write(`send ${device} ${code}`, (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
     });
   }
 
@@ -173,6 +170,26 @@ export class IRSubscriber {
         this.error(
           `No handler registered for ${this.prevCode} (repeat ${this.repeatCount})`
         );
+      }
+    }
+  }
+
+  private log(message?: any, ...optionalParams: any[]) {
+    if (this.shouldLog) {
+      if (optionalParams && optionalParams.length > 0) {
+        console.log(message, optionalParams);
+      } else {
+        console.log(message);
+      }
+    }
+  }
+
+  private error(message?: any, ...optionalParams: any[]) {
+    if (this.shouldLog) {
+      if (optionalParams && optionalParams.length > 0) {
+        console.error(message, optionalParams);
+      } else {
+        console.error(message);
       }
     }
   }
