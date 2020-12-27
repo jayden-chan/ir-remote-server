@@ -124,19 +124,29 @@ export class IRSubscriber {
     });
   }
 
-  public async send(device: string, code: string): Promise<void> {
+  public async send(
+    proto: string,
+    repeatCount: number,
+    numBits: number,
+    device: string,
+    code: string
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.socket.write(`send ${device} ${code}`, (err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
+      this.socket.write(
+        `send ${proto} ${repeatCount} ${numBits} ${device} ${code}`,
+        (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
         }
-      });
+      );
     });
   }
 
   public close(): void {
+    this.socket.emit("end");
     this.socket.destroy();
   }
 

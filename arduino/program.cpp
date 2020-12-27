@@ -187,24 +187,45 @@ void loop() {
   if (client.connected() && client.available()) {
     uint64_t recv = 0;
     int offset = 0;
+    int bytes_read = 0;
 
-    unsigned char proto = client.read();
+    uint8_t proto;
+    uint8_t repeat_count;
+    uint8_t num_bits;
 
     while (client.available()) {
-      char c = client.read();
-      recv |= (c << offset);
-      offset += 8;
+      if (bytes_read == 0) {
+        proto = client.read();
+      } else if (bytes_read == 1) {
+        repeat_count = client.read();
+      } else if (bytes_read == 2) {
+        num_bits = client.read();
+      } else {
+        char c = client.read();
+        recv |= (c << offset);
+        offset += 8;
+      }
+
+      bytes_read += 1;
     }
 
-    if (proto == 0) {
-      irsend.sendNEC(recv);
-    } else if (proto == 1) {
-      irsend.sendRC5(recv);
-    } else if (proto == 2) {
-      irsend.sendRCMM(recv);
-    }
-
+#ifdef DEBUG_MODE
+    Serial.println(bytes_read, DEC);
+    Serial.println(proto, DEC);
+    Serial.println(repeat_count, DEC);
+    Serial.println(num_bits, DEC);
     Serial.println(uint64ToString(recv, 16));
+#endif
+
+    if (bytes_read >= 4) {
+      if (proto == 0) {
+        irsend.sendNEC(recv, num_bits, repeat_count);
+      } else if (proto == 1) {
+        irsend.sendRC5(recv, num_bits, repeat_count);
+      } else if (proto == 2) {
+        irsend.sendRCMM(recv, num_bits, repeat_count);
+      }
+    }
   }
 
   /* Check if the IR code has been received. */

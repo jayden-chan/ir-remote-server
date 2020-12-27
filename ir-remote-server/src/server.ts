@@ -83,6 +83,14 @@ export class IRServer {
         // Handle subscribers who want to listen to IR signals from nodes
         const [, subscribeDevice] = data.match(/subscribe (\w+)/) ?? [];
         if (subscribeDevice !== undefined) {
+          if (this.devices.every((d) => d.id !== subscribeDevice)) {
+            this.error(
+              `${socket.remoteAddress} tried to subscribe to device ${subscribeDevice} but it was not registered`
+            );
+            socket.write(`device ${subscribeDevice} is not registered`);
+            return;
+          }
+
           const sub = this.subscribers.find((s) => s.sock === socket);
           if (sub) {
             sub.devices.push(subscribeDevice);
@@ -114,13 +122,13 @@ export class IRServer {
         }
 
         // Send IR signals using an IR node
-        const [, protocol, sendDevice, sendData] =
-          data.match(/send (\w+) (\w+) (\w+)/) ?? [];
-        if ((protocol !== sendDevice) !== undefined && sendData !== undefined) {
+        const [, protocol, repeat_count, num_bits, sendDevice, sendData] =
+          data.match(/send (\w+) (\d+) (\d+) (\w+) (\w+)/) ?? [];
+        if (protocol !== undefined) {
           const dev = this.devices.find((d) => d.id === sendDevice);
           if (dev === undefined) {
             this.error(
-              `Attempted to send data to device "${dev}" but device was not found`
+              `Attempted to send data to device "${sendDevice}" but device was not found`
             );
             return;
           }
@@ -138,8 +146,13 @@ export class IRServer {
             /* prettier-ignore */ case "RCMM": protoByte = 2; break;
           }
 
-          const data = hexMatches.map((byte) => parseInt(byte, 16)).reverse();
-          dev.sock.write(new Uint8Array([protoByte, ...data]));
+          const repeatCountByte = parseInt(repeat_count);
+          const numBitsByte = parseInt(num_bits);
+
+          const code = hexMatches.map((byte) => parseInt(byte, 16)).reverse();
+          const data = [protoByte, repeatCountByte, numBitsByte, ...code];
+          this.log(`Sending [${data.join(",")}] to device ${dev.id}`);
+          dev.sock.write(new Uint8Array(data));
 
           return;
         }
