@@ -133,9 +133,11 @@ export class IRServer {
             return;
           }
 
-          const hexMatches = sendData.match(/\w{1,2}/g);
+          const paddedData =
+            sendData.length % 2 !== 0 ? `0${sendData}` : sendData;
+          const hexMatches = paddedData.match(/\w{1,2}/g);
           if (hexMatches === null) {
-            this.error(`Send data (${sendData}) is in the wrong format`);
+            this.error(`Send data (${paddedData}) is in the wrong format`);
             return;
           }
 

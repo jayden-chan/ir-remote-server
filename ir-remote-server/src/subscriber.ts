@@ -112,6 +112,11 @@ export class IRSubscriber {
         return;
       }
 
+      if (chunk.startsWith("fail")) {
+        this.error(`Failed to connect: ${chunk}`);
+        return;
+      }
+
       const [, device, data] = chunk.match(/(\w+) (\w+)/) ?? [];
       if (device === undefined || data === undefined) {
         this.error(
