@@ -1,8 +1,10 @@
 #include <Arduino.h>
+
 #include <ESP8266WiFi.h>
+#include <IRremoteESP8266.h>
+
 #include <IRac.h>
 #include <IRrecv.h>
-#include <IRremoteESP8266.h>
 #include <IRsend.h>
 #include <IRtext.h>
 #include <IRutils.h>
@@ -185,13 +187,24 @@ void loop() {
   if (client.connected() && client.available()) {
     uint64_t recv = 0;
     int offset = 0;
+
+    unsigned char proto = client.read();
+
     while (client.available()) {
       char c = client.read();
       recv |= (c << offset);
       offset += 8;
     }
+
+    if (proto == 0) {
+      irsend.sendNEC(recv);
+    } else if (proto == 1) {
+      irsend.sendRC5(recv);
+    } else if (proto == 2) {
+      irsend.sendRCMM(recv);
+    }
+
     Serial.println(uint64ToString(recv, 16));
-    irsend.sendNEC(recv);
   }
 
   /* Check if the IR code has been received. */

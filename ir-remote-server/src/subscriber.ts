@@ -143,6 +143,10 @@ export class IRSubscriber {
   private handleDevicePacket(device: string, data: string): void {
     const key = this.codemap[data];
     const keymap = this.keymaps[device];
+    if (process.env.IRS_DEBUG) {
+      this.log(`${device} ${data}`);
+    }
+
     if (keymap === undefined) {
       this.error(`No keymap found for device ${device}`);
       return;

@@ -114,8 +114,9 @@ export class IRServer {
         }
 
         // Send IR signals using an IR node
-        const [, sendDevice, sendData] = data.match(/send (\w+) (\w+)/) ?? [];
-        if (sendDevice !== undefined && sendData !== undefined) {
+        const [, protocol, sendDevice, sendData] =
+          data.match(/send (\w+) (\w+) (\w+)/) ?? [];
+        if ((protocol !== sendDevice) !== undefined && sendData !== undefined) {
           const dev = this.devices.find((d) => d.id === sendDevice);
           if (dev === undefined) {
             this.error(
@@ -130,8 +131,15 @@ export class IRServer {
             return;
           }
 
+          let protoByte = 0;
+          switch (protocol) {
+            /* prettier-ignore */ case "NEC": protoByte = 0; break;
+            /* prettier-ignore */ case "RC5": protoByte = 1; break;
+            /* prettier-ignore */ case "RCMM": protoByte = 2; break;
+          }
+
           const data = hexMatches.map((byte) => parseInt(byte, 16)).reverse();
-          dev.sock.write(new Uint8Array(data));
+          dev.sock.write(new Uint8Array([protoByte, ...data]));
 
           return;
         }
