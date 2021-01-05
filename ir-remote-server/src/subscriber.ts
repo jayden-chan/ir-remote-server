@@ -49,6 +49,13 @@ export type SubscriberConfig = {
   repeatDelay?: number;
 
   /**
+   * If echo mode is enabled, the IR information will
+   * simply be printed to stdout and no key handlers will
+   * be invoked
+   */
+  echoMode?: boolean;
+
+  /**
    * The mapping between key Hex codes and human-readable
    * key codes (ex. 40BD01FE -> HOME)
    */
@@ -70,25 +77,32 @@ export class IRSubscriber {
   private codemap: KeyCodeMap;
   private keymaps: { [key: string]: Keymap };
   private shouldLog: boolean;
+  private echoMode: boolean;
 
   constructor({
-    port,
+    port = DEFAULT_PORT,
     host,
     keymaps,
-    repeatDelay,
     codemap,
-    shouldLog,
+    repeatDelay = 0,
+    shouldLog = true,
+    echoMode = false,
   }: SubscriberConfig) {
-    this.socket = Net.connect({ port: port ?? DEFAULT_PORT, host });
+    this.socket = Net.connect({ port, host });
 
     // We don't want Nagle's algorithm messing with the packet timings
     // when we are trying to send key codes to the IR nodes
     this.socket.setNoDelay(true);
 
+    this.echoMode = echoMode;
     this.codemap = codemap;
     this.keymaps = keymaps;
-    this.shouldLog = shouldLog ?? true;
-    this.delay = repeatDelay ?? 0;
+    this.shouldLog = shouldLog;
+    this.delay = repeatDelay;
+  }
+
+  public setEchoMode(mode: boolean) {
+    this.echoMode = mode;
   }
 
   public async subscribe(device: string): Promise<void> {
@@ -113,7 +127,7 @@ export class IRSubscriber {
       }
 
       if (chunk.startsWith("fail")) {
-        this.error(`Failed to connect: ${chunk}`);
+        this.error(`Failed to connect: ${chunk.slice(5)}`);
         return;
       }
 
@@ -158,6 +172,12 @@ export class IRSubscriber {
   private handleDevicePacket(device: string, data: string): void {
     const key = this.codemap[data];
     const keymap = this.keymaps[device];
+
+    if (this.echoMode) {
+      this.log(`${device} ${data}`);
+      return;
+    }
+
     if (process.env.IRS_DEBUG) {
       this.log(`${device} ${data}`);
     }
