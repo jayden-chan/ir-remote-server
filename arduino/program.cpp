@@ -97,7 +97,6 @@ void setup() {
       type = "filesystem";
     }
 
-    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
     Serial.println("Start updating " + type);
   });
 
@@ -145,7 +144,7 @@ int ensureClient() {
 
     // We can't have Nagle's algorithm buffering the packets because
     // it will lead to strange timings when holding down a button on
-    // the remote and sending the "repeat" packets.
+    // the remote.
     client.setNoDelay(true);
 
     client.print("register " DEVICE_ID);
@@ -158,7 +157,6 @@ int ensureClient() {
   }
 }
 
-/* The repeating section of the code */
 void loop() {
   if (client.connected() && client.available()) {
     uint64_t recv = 0;
