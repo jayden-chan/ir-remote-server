@@ -201,9 +201,9 @@ export class IRSubscriber {
       if (keymap[this.prevCode] !== undefined) {
         const handler = keymap[this.prevCode];
         if (handler.delay !== undefined && this.repeatCount >= handler.delay) {
-          execHandler(keymap[this.prevCode], this.repeatCount);
+          execHandler(handler, this.repeatCount - handler.delay + 1);
         } else if (this.repeatCount >= this.delay) {
-          execHandler(keymap[this.prevCode], this.repeatCount - this.delay + 1);
+          execHandler(handler, this.repeatCount - this.delay + 1);
         }
       } else {
         this.error(

@@ -87,7 +87,7 @@ export class IRServer {
             this.error(
               `${socket.remoteAddress} tried to subscribe to device ${subscribeDevice} but it was not registered`
             );
-            socket.write(`device ${subscribeDevice} is not registered`);
+            socket.write(`fail device ${subscribeDevice} is not registered`);
             return;
           }
 

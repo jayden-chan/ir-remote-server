@@ -47,9 +47,9 @@ WiFiClient client;
 void setup() {
 #if defined(ESP8266)
   Serial.begin(kBaudRate, SERIAL_8N1, SERIAL_TX_ONLY);
-#else /* ESP8266 */
+#else             /* ESP8266 */
   Serial.begin(kBaudRate, SERIAL_8N1);
-#endif /* ESP8266 */
+#endif            /* ESP8266 */
   while (!Serial) /* Wait for the serial connection to be establised. */
     delay(50);
   /* Perform a low level sanity checks that the compiler performs bit field
